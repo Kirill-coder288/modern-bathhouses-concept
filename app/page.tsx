@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const assetPath = (path: string) =>
   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
@@ -95,6 +95,13 @@ export default function Home() {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
   const [demoNotice, setDemoNotice] = useState(false);
+
+  useEffect(() => {
+    if (!demoNotice) return;
+
+    const timeoutId = window.setTimeout(() => setDemoNotice(false), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [demoNotice]);
 
   const estimate = useMemo(() => {
     const typeMultiplier = quiz.type === "Баня" ? 1 : quiz.type === "Гостевой дом" ? 1.08 : 1.16;
