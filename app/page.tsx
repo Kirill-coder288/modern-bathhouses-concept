@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 
+const assetPath = (path: string) =>
+  `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+
 type QuizState = {
   type: "Баня" | "Гостевой дом" | "Баня + гостевой дом";
   area: number;
@@ -20,7 +23,7 @@ const cases = [
     price: "4,9 млн ₽",
     term: "94 дня",
     year: "2025",
-    image: "/images/case-repino-exterior.webp",
+    image: assetPath("/images/case-repino-exterior.webp"),
     tag: "Под ключ",
     quote: "Хотели тёплую баню, которая не выглядит дачным домиком. Получилось именно наше место силы.",
     author: "Алексей и Марина",
@@ -32,7 +35,7 @@ const cases = [
     price: "3,6 млн ₽",
     term: "72 дня",
     year: "2024",
-    image: "/images/case-toksovo.webp",
+    image: assetPath("/images/case-toksovo.webp"),
     tag: "Под ключ",
     quote: "Смета совпала с итоговой суммой, а стройку закончили на неделю раньше графика.",
     author: "Илья, Токсово",
@@ -44,7 +47,7 @@ const cases = [
     price: "6,8 млн ₽",
     term: "118 дней",
     year: "2025",
-    image: "/images/case-zelenogorsk.webp",
+    image: assetPath("/images/case-zelenogorsk.webp"),
     tag: "Индивидуальный проект",
     quote: "Изменили планировку под наш участок и сохранили панорамный вид на сосны.",
     author: "Ольга и Андрей",
@@ -63,14 +66,14 @@ const faqs = [
 ];
 
 const gallery = [
-  "/images/case-repino-exterior.webp",
-  "/images/case-repino-interior.webp",
-  "/images/case-repino-terrace.webp",
-  "/images/hero-bathhouse.webp",
-  "/images/case-toksovo.webp",
-  "/images/case-zelenogorsk.webp",
-  "/images/case-repino-interior.webp",
-  "/images/case-repino-terrace.webp",
+  assetPath("/images/case-repino-exterior.webp"),
+  assetPath("/images/case-repino-interior.webp"),
+  assetPath("/images/case-repino-terrace.webp"),
+  assetPath("/images/hero-bathhouse.webp"),
+  assetPath("/images/case-toksovo.webp"),
+  assetPath("/images/case-zelenogorsk.webp"),
+  assetPath("/images/case-repino-interior.webp"),
+  assetPath("/images/case-repino-terrace.webp"),
 ];
 
 function formatPrice(value: number) {
@@ -133,7 +136,11 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню">{menuOpen ? "×" : "☰"}</button>
       </header>
 
-      <section className="hero" id="top">
+      <section
+        className="hero"
+        id="top"
+        style={{ backgroundImage: `url("${assetPath("/images/hero-bathhouse.webp")}")` }}
+      >
         <div className="hero-shade" />
         <div className="hero-content shell">
           <p className="eyebrow">Портфолио-концепт • Санкт-Петербург</p>
@@ -262,7 +269,7 @@ export default function Home() {
         <div className="timeline">
           {[ ["01", "Знакомство", "Обсуждаем задачи, участок и бюджет"], ["02", "Проект", "Готовим планы, визуализации и смету"], ["03", "Договор", "Фиксируем цену и календарный график"], ["04", "Строительство", "Собираем объект и ведём фотоотчёт"], ["05", "Сдача", "Проверяем, подписываем акт и выдаём гарантию"] ].map(([n, title, text]) => <article key={n}><span>{n}</span><h3>{title}</h3><p>{text}</p></article>)}
         </div>
-        <div className="concept-showcase"><img src="/images/case-repino-interior.webp" alt="Интерьер современной парной" /><div><small>Логика концепта</small><b>От вдохновения к расчёту за несколько экранов</b><p>Архитектурная фотография создаёт желание, кейсы отвечают на сомнения, а мини-квиз переводит интерес в понятный бюджет.</p><span>Hero → Кейсы → Калькулятор → Заявка</span></div></div>
+        <div className="concept-showcase"><img src={assetPath("/images/case-repino-interior.webp")} alt="Интерьер современной парной" /><div><small>Логика концепта</small><b>От вдохновения к расчёту за несколько экранов</b><p>Архитектурная фотография создаёт желание, кейсы отвечают на сомнения, а мини-квиз переводит интерес в понятный бюджет.</p><span>Hero → Кейсы → Калькулятор → Заявка</span></div></div>
       </section>
 
       <section className="reviews section" id="reviews">
