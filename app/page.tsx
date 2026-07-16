@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const assetPath = (path: string) =>
   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
@@ -94,7 +94,9 @@ export default function Home() {
   });
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+  const galleryTouchStart = useRef<number | null>(null);
   const [demoNotice, setDemoNotice] = useState(false);
+  const galleryOpen = galleryIndex !== null;
 
   useEffect(() => {
     if (!demoNotice) return;
@@ -102,6 +104,57 @@ export default function Home() {
     const timeoutId = window.setTimeout(() => setDemoNotice(false), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [demoNotice]);
+
+  useEffect(() => {
+    if (!galleryOpen) return;
+
+    const scrollPosition = window.scrollY;
+    const previousBodyStyles = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+    };
+    const previousRootOverflow = document.documentElement.style.overflow;
+    const previousRootScrollBehavior = document.documentElement.style.scrollBehavior;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setGalleryIndex(null);
+      if (event.key === "ArrowLeft") {
+        setGalleryIndex((current) => current === null ? null : (current + gallery.length - 1) % gallery.length);
+      }
+      if (event.key === "ArrowRight") {
+        setGalleryIndex((current) => current === null ? null : (current + 1) % gallery.length);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.documentElement.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyStyles.overflow;
+      document.body.style.position = previousBodyStyles.position;
+      document.body.style.top = previousBodyStyles.top;
+      document.body.style.left = previousBodyStyles.left;
+      document.body.style.right = previousBodyStyles.right;
+      document.body.style.width = previousBodyStyles.width;
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(0, scrollPosition);
+      window.requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = previousRootScrollBehavior;
+      });
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [galleryOpen]);
 
   const estimate = useMemo(() => {
     const typeMultiplier = quiz.type === "Баня" ? 1 : quiz.type === "Гостевой дом" ? 1.08 : 1.16;
@@ -119,6 +172,30 @@ export default function Home() {
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMenuOpen(false);
+  }
+
+  function showPreviousPhoto() {
+    setGalleryIndex((current) => current === null ? null : (current + gallery.length - 1) % gallery.length);
+  }
+
+  function showNextPhoto() {
+    setGalleryIndex((current) => current === null ? null : (current + 1) % gallery.length);
+  }
+
+  function closeGallery() {
+    galleryTouchStart.current = null;
+    setGalleryIndex(null);
+  }
+
+  function finishGallerySwipe(clientX: number) {
+    if (galleryTouchStart.current === null) return;
+
+    const distance = galleryTouchStart.current - clientX;
+    if (Math.abs(distance) >= 45) {
+      if (distance > 0) showNextPhoto();
+      else showPreviousPhoto();
+    }
+    galleryTouchStart.current = null;
   }
 
   return (
@@ -316,7 +393,44 @@ export default function Home() {
 
       <div className="quick-contacts"><button className="telegram" onClick={() => setDemoNotice(true)} aria-label="Демонстрация Telegram-кнопки">✈</button><button className="phone" onClick={() => setDemoNotice(true)} aria-label="Демонстрация кнопки звонка">☎</button></div>
 
-      {galleryIndex !== null && <div className="modal" role="dialog" aria-modal="true" aria-label="Галерея объекта" onClick={() => setGalleryIndex(null)}><div className="gallery-modal" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setGalleryIndex(null)}>×</button><img src={gallery[galleryIndex]} alt={`Фотография объекта ${galleryIndex + 1}`} /><div className="gallery-controls"><button onClick={() => setGalleryIndex((galleryIndex + gallery.length - 1) % gallery.length)}>←</button><span>{galleryIndex + 1} / {gallery.length}</span><button onClick={() => setGalleryIndex((galleryIndex + 1) % gallery.length)}>→</button></div><div className="gallery-thumbs">{gallery.map((src, i) => <button className={galleryIndex === i ? "active" : ""} key={`${src}-${i}`} onClick={() => setGalleryIndex(i)}><img src={src} alt="" /></button>)}</div></div></div>}
+      {galleryIndex !== null && (
+        <div className="modal" role="dialog" aria-modal="true" aria-label="Галерея объекта" onClick={closeGallery}>
+          <div className="gallery-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={closeGallery} aria-label="Закрыть галерею">×</button>
+            <div
+              className="gallery-stage"
+              onPointerDown={(event) => {
+                galleryTouchStart.current = event.clientX;
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerUp={(event) => finishGallerySwipe(event.clientX)}
+              onPointerCancel={() => { galleryTouchStart.current = null; }}
+            >
+              <img src={gallery[galleryIndex]} alt={`Фотография объекта ${galleryIndex + 1} из ${gallery.length}`} draggable={false} />
+            </div>
+            <div className="gallery-controls">
+              <button type="button" onClick={showPreviousPhoto} aria-label="Предыдущая фотография">←</button>
+              <span aria-live="polite">{galleryIndex + 1} / {gallery.length}</span>
+              <button type="button" onClick={showNextPhoto} aria-label="Следующая фотография">→</button>
+              <button className="gallery-done" type="button" onClick={closeGallery}>Закрыть</button>
+            </div>
+            <div className="gallery-thumbs" aria-label="Все фотографии объекта">
+              {gallery.map((src, index) => (
+                <button
+                  className={galleryIndex === index ? "active" : ""}
+                  type="button"
+                  key={`${src}-${index}`}
+                  onClick={() => setGalleryIndex(index)}
+                  aria-label={`Открыть фотографию ${index + 1}`}
+                  aria-current={galleryIndex === index ? "true" : undefined}
+                >
+                  <img src={src} alt="" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {demoNotice && <div className="demo-toast" role="status"><button onClick={() => setDemoNotice(false)} aria-label="Закрыть уведомление">×</button><b>Демонстрационный сценарий</b><p>Это портфолио-концепт. В реальном проекте действие отправило бы заявку в Telegram, почту или CRM. Здесь данные не сохраняются.</p></div>}
     </main>
